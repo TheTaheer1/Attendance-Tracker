@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import MainLayout from './components/MainLayout';
 import Header from './components/Header';
 import StatsPanel from './components/StatsPanel';
 import FilterControls from './components/FilterControls';
@@ -8,6 +9,8 @@ import LoadingSpinner from './components/LoadingSpinner';
 import EmptyState from './components/EmptyState';
 import StudentList from './components/StudentList';
 import Footer from './components/Footer';
+import { countTotal, countPresent, countAbsent } from './helpers/countStudents';
+import { filterByType, filterLowAttendance, sortByAttendance } from './helpers/filterStudents';
 
 function App() {
   // storing all student data
@@ -84,57 +87,20 @@ function App() {
 
   // function to filter students based on conditions
   const getFilteredStudents = () => {
+    // step 1: copy all students
     let result = [];
-    
-    // copy all students to result array
     for (let i = 0; i < students.length; i++) {
       result.push(students[i]);
     }
 
-    // filter by Present/Absent button
-    if (filterType === 'Present') {
-      let temp = [];
-      for (let i = 0; i < result.length; i++) {
-        if (result[i].attendance >= 75) {
-          temp.push(result[i]);
-        }
-      }
-      result = temp;
-    } else if (filterType === 'Absent') {
-      let temp = [];
-      for (let i = 0; i < result.length; i++) {
-        if (result[i].attendance < 75) {
-          temp.push(result[i]);
-        }
-      }
-      result = temp;
-    }
+    // step 2: filter by All/Present/Absent
+    result = filterByType(result, filterType);
 
-    // if low attendance toggle is on, show only students with attendance < 75
-    if (showLowAttendance) {
-      let temp = [];
-      for (let i = 0; i < result.length; i++) {
-        if (result[i].attendance < 75) {
-          temp.push(result[i]);
-        }
-      }
-      result = temp;
-    }
+    // step 3: filter by low attendance if toggle is on
+    result = filterLowAttendance(result, showLowAttendance);
 
-    // sort students by attendance if sort button is clicked
-    if (sortBy === 'attendance') {
-      // using simple bubble sort logic
-      for (let i = 0; i < result.length; i++) {
-        for (let j = 0; j < result.length - 1; j++) {
-          if (result[j].attendance < result[j + 1].attendance) {
-            // swap students
-            let temp = result[j];
-            result[j] = result[j + 1];
-            result[j + 1] = temp;
-          }
-        }
-      }
-    }
+    // step 4: sort if sort button is clicked
+    result = sortByAttendance(result, sortBy === 'attendance');
 
     return result;
   };
@@ -195,29 +161,18 @@ function App() {
   };
 
   // counting total students
-  const totalStudents = students.length;
+  const totalStudents = countTotal(students);
   
   // counting present students (attendance >= 75%)
-  let presentStudents = 0;
-  for (let i = 0; i < students.length; i++) {
-    if (students[i].attendance >= 75) {
-      presentStudents = presentStudents + 1;
-    }
-  }
+  const presentStudents = countPresent(students);
   
   // counting absent students (attendance < 75%)
-  let absentStudents = 0;
-  for (let i = 0; i < students.length; i++) {
-    if (students[i].attendance < 75) {
-      absentStudents = absentStudents + 1;
-    }
-  }
+  const absentStudents = countAbsent(students);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 py-8 px-4">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <Header />
+    <MainLayout>
+      {/* Header */}
+      <Header />
 
         {/* Stats Panel */}
         <StatsPanel
@@ -261,9 +216,8 @@ function App() {
 
         {/* Footer */}
         <Footer />
-      </div>
-    </div>
-  );
-}
+      </MainLayout>
+    );
+  }
 
 export default App;
