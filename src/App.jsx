@@ -10,41 +10,64 @@ import StudentList from './components/StudentList';
 import Footer from './components/Footer';
 
 function App() {
-  // State Management - As per requirements
+  // storing all student data
   const [students, setStudents] = useState([]);
-  const [filterType, setFilterType] = useState('All'); // 'All', 'Present', 'Absent'
-  const [selectedStudents, setSelectedStudents] = useState([]); // Array of selected student IDs
+  
+  // this will store which filter button is clicked (All, Present or Absent)
+  const [filterType, setFilterType] = useState('All');
+  
+  // storing selected student ids in array
+  const [selectedStudents, setSelectedStudents] = useState([]);
+  
+  // true/false for showing only low attendance students
   const [showLowAttendance, setShowLowAttendance] = useState(false);
+  
+  // to show loading spinner when data is being fetched
   const [loading, setLoading] = useState(true);
-  const [sortBy, setSortBy] = useState(null); // null or 'attendance' (bonus feature)
+  
+  // for sorting students by attendance percentage
+  const [sortBy, setSortBy] = useState(null);
 
-  // Fetch student data using useEffect on mount
+  // this code runs when page first loads
   useEffect(() => {
     const fetchStudents = async () => {
       setLoading(true);
+      
       try {
-        // Check if we have saved data in localStorage
+        // first check if we already have data saved in browser
         const savedStudents = localStorage.getItem('studentAttendance');
 
         if (savedStudents) {
-          // Use saved data
-          setStudents(JSON.parse(savedStudents));
+          // if data exists, use it
+          const data = JSON.parse(savedStudents);
+          setStudents(data);
           setLoading(false);
         } else {
-          // Fetch fresh data and generate attendance
+          // if no data, fetch from API
           const response = await axios.get('https://jsonplaceholder.typicode.com/users');
+          
+          // create student array with attendance percentage
+          const studentsData = [];
+          
+          for (let i = 0; i < response.data.length; i++) {
+            const user = response.data[i];
+            
+            // generate random attendance between 40 and 100
+            const randomAttendance = Math.floor(Math.random() * 61) + 40;
+            
+            // create student object
+            const studentObj = {
+              id: user.id,
+              name: user.name,
+              email: user.email,
+              city: user.address.city,
+              attendance: randomAttendance
+            };
+            
+            studentsData.push(studentObj);
+          }
 
-          // Map users to students with random attendance %
-          const studentsData = response.data.map(user => ({
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            city: user.address.city,
-            // Generate random attendance between 40% and 100%
-            attendance: Math.floor(Math.random() * 61) + 40,
-          }));
-
-          // Save to localStorage
+          // save data to browser so we don't lose it on refresh
           localStorage.setItem('studentAttendance', JSON.stringify(studentsData));
 
           setStudents(studentsData);
@@ -59,64 +82,136 @@ function App() {
     fetchStudents();
   }, []);
 
-  // Filter students based on selected filters
+  // function to filter students based on conditions
   const getFilteredStudents = () => {
-    let filtered = [...students];
+    let result = [];
+    
+    // copy all students to result array
+    for (let i = 0; i < students.length; i++) {
+      result.push(students[i]);
+    }
 
-    // Filter by attendance status
+    // filter by Present/Absent button
     if (filterType === 'Present') {
-      filtered = filtered.filter(student => student.attendance >= 75);
+      let temp = [];
+      for (let i = 0; i < result.length; i++) {
+        if (result[i].attendance >= 75) {
+          temp.push(result[i]);
+        }
+      }
+      result = temp;
     } else if (filterType === 'Absent') {
-      filtered = filtered.filter(student => student.attendance < 75);
+      let temp = [];
+      for (let i = 0; i < result.length; i++) {
+        if (result[i].attendance < 75) {
+          temp.push(result[i]);
+        }
+      }
+      result = temp;
     }
 
-    // Filter by low attendance toggle
+    // if low attendance toggle is on, show only students with attendance < 75
     if (showLowAttendance) {
-      filtered = filtered.filter(student => student.attendance < 75);
+      let temp = [];
+      for (let i = 0; i < result.length; i++) {
+        if (result[i].attendance < 75) {
+          temp.push(result[i]);
+        }
+      }
+      result = temp;
     }
 
-    // Bonus: Sort by attendance
+    // sort students by attendance if sort button is clicked
     if (sortBy === 'attendance') {
-      filtered = filtered.sort((a, b) => b.attendance - a.attendance);
+      // using simple bubble sort logic
+      for (let i = 0; i < result.length; i++) {
+        for (let j = 0; j < result.length - 1; j++) {
+          if (result[j].attendance < result[j + 1].attendance) {
+            // swap students
+            let temp = result[j];
+            result[j] = result[j + 1];
+            result[j + 1] = temp;
+          }
+        }
+      }
     }
 
-    return filtered;
+    return result;
   };
 
   const filteredStudents = getFilteredStudents();
 
-  // Handle student selection (toggle selection for multiple students)
+  // when user clicks on a student card
   const handleStudentClick = (studentId) => {
-    setSelectedStudents(prevSelected => {
-      if (prevSelected.includes(studentId)) {
-        // Deselect if already selected
-        return prevSelected.filter(id => id !== studentId);
-      } else {
-        // Add to selection
-        return [...prevSelected, studentId];
+    let newSelected = [];
+    let alreadySelected = false;
+    
+    // check if student is already selected
+    for (let i = 0; i < selectedStudents.length; i++) {
+      if (selectedStudents[i] === studentId) {
+        alreadySelected = true;
       }
-    });
+    }
+    
+    if (alreadySelected) {
+      // remove from selection
+      for (let i = 0; i < selectedStudents.length; i++) {
+        if (selectedStudents[i] !== studentId) {
+          newSelected.push(selectedStudents[i]);
+        }
+      }
+    } else {
+      // add to selection
+      for (let i = 0; i < selectedStudents.length; i++) {
+        newSelected.push(selectedStudents[i]);
+      }
+      newSelected.push(studentId);
+    }
+    
+    setSelectedStudents(newSelected);
   };
 
-  // Toggle low attendance filter
+  // toggle low attendance filter on/off
   const toggleLowAttendance = () => {
-    setShowLowAttendance(!showLowAttendance);
+    if (showLowAttendance === true) {
+      setShowLowAttendance(false);
+    } else {
+      setShowLowAttendance(true);
+    }
   };
 
-  // Toggle sort by attendance
+  // toggle sort on/off
   const toggleSort = () => {
-    setSortBy(sortBy === 'attendance' ? null : 'attendance');
+    if (sortBy === 'attendance') {
+      setSortBy(null);
+    } else {
+      setSortBy('attendance');
+    }
   };
 
-  // Clear all selections
+  // clear all selected students
   const clearSelection = () => {
     setSelectedStudents([]);
   };
 
-  // Calculate statistics
+  // counting total students
   const totalStudents = students.length;
-  const presentStudents = students.filter(s => s.attendance >= 75).length;
-  const absentStudents = students.filter(s => s.attendance < 75).length;
+  
+  // counting present students (attendance >= 75%)
+  let presentStudents = 0;
+  for (let i = 0; i < students.length; i++) {
+    if (students[i].attendance >= 75) {
+      presentStudents = presentStudents + 1;
+    }
+  }
+  
+  // counting absent students (attendance < 75%)
+  let absentStudents = 0;
+  for (let i = 0; i < students.length; i++) {
+    if (students[i].attendance < 75) {
+      absentStudents = absentStudents + 1;
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 py-8 px-4">
