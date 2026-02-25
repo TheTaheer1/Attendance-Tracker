@@ -1,7 +1,6 @@
 import React from 'react';
 
 function StudentCard({ student, isSelected, onClick }) {
-  // Determine status color based on attendance percentage
   const getStatusColor = (attendance) => {
     if (attendance >= 75) {
       return {

@@ -1,6 +1,5 @@
 import React from 'react';
 
-// Simple component to show statistics numbers
 function StatCard({ icon, label, value, color }) {
   return (
     <div className={`bg-gradient-to-br ${color} rounded-2xl p-6 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:scale-105 cursor-pointer`}>
